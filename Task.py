@@ -2,6 +2,7 @@ import glob
 import os
 import shutil
 from functools import cmp_to_key
+from pickle import dump, load
 
 from keras_preprocessing.image import ImageDataGenerator
 from tensorflow import keras
@@ -44,6 +45,25 @@ def get_trained_model(model_dir, split):
     model_path = os.path.join(model_dir, files[0])
 
     return keras.models.load_model(model_path), model_epochs
+
+
+def get_history(history_dir, split):
+    if not os.path.exists(history_dir):
+        return None
+
+    pathname = fr"{history_dir}/history_{split}_*.txt"
+    files = [os.path.basename(x) for x in glob.glob(pathname)]
+
+    if not files:
+        return None
+
+    files.sort(key=cmp_to_key(compare))
+
+    history_path = os.path.join(history_dir, files[0])
+
+    with open(history_path, 'rb') as handle:
+        history = load(handle)
+    return history
 
 
 def get_model(model_dir, split, img_width, img_height):
@@ -105,8 +125,6 @@ def get_split2_data():
         shear_range=0.2,
         zoom_range=0.2,
         horizontal_flip=True,
-        featurewise_center=True,
-        featurewise_std_normalization=True,
         rotation_range=90,
         width_shift_range=0.2,
         height_shift_range=0.2,
@@ -119,8 +137,6 @@ def get_split2_data():
         shear_range=0.2,
         zoom_range=0.2,
         horizontal_flip=True,
-        featurewise_center=True,
-        featurewise_std_normalization=True,
         rotation_range=90,
         width_shift_range=0.2,
         height_shift_range=0.2,
@@ -137,8 +153,6 @@ def get_split3_data():
         shear_range=0.2,
         zoom_range=0.2,
         horizontal_flip=True,
-        featurewise_center=True,
-        featurewise_std_normalization=True,
         rotation_range=90,
         width_shift_range=0.2,
         height_shift_range=0.2,
@@ -151,8 +165,6 @@ def get_split3_data():
         shear_range=0.2,
         zoom_range=0.2,
         horizontal_flip=True,
-        featurewise_center=True,
-        featurewise_std_normalization=True,
         rotation_range=90,
         width_shift_range=0.2,
         height_shift_range=0.2,
@@ -176,11 +188,11 @@ def get_split_data(split):
     return train_datagen, test_datagen
 
 
-def train(train_data_dir, test_data_dir, model_dir, split):
+def train(train_data_dir, test_data_dir, model_dir, history_dir, split):
     img_width, img_height = 224, 224
     nb_train_samples = 16324
     nb_validation_samples = 1819
-    epochs = 5
+    epochs = 200
     batch_size = 16
 
     try:
@@ -190,6 +202,7 @@ def train(train_data_dir, test_data_dir, model_dir, split):
         return
 
     model, epochs_already_done = get_model(model_dir, split, img_width, img_height)
+    old_history = get_history(history_dir, split)
 
     train_generator = train_datagen.flow_from_directory(train_data_dir,
                                                         target_size=(img_width, img_height),
@@ -206,17 +219,44 @@ def train(train_data_dir, test_data_dir, model_dir, split):
                         epochs=epochs, validation_data=test_generator,
                         validation_steps=nb_validation_samples // batch_size,
                         verbose=1)
-    new_epochs = epochs_already_done + epochs
-    plot_graphs(history, split, new_epochs)
 
-    filename = f"model_{split}_{new_epochs}.hdf5"
-    path = os.path.join(model_dir, filename)
+    merged_history = merge_history(history.history, old_history)
+
+    new_epochs = epochs_already_done + epochs
+    plot_graphs(merged_history, split, new_epochs)
+
+    save(model, model_dir, merged_history, history_dir, split, new_epochs)
+
+
+def save(model, model_dir, history, history_dir, split, epochs):
+    filename_model = f"model_{split}_{epochs}.hdf5"
+    path = os.path.join(model_dir, filename_model)
     model.save(path)
+
+    filename_history = f"history_{split}_{epochs}.txt"
+    path = os.path.join(history_dir, filename_history)
+    with open(path, 'wb') as handle:
+        dump(history, handle)
+
+
+def merge_history(new_history, old_history):
+    if old_history is None:
+        old_history = {'loss': [],
+                       'accuracy': [],
+                       'val_loss': [],
+                       'val_accuracy': []}
+
+    old_history['loss'].extend(new_history['loss'])
+    old_history['accuracy'].extend(new_history['accuracy'])
+    old_history['val_loss'].extend(new_history['val_loss'])
+    old_history['val_accuracy'].extend(new_history['val_accuracy'])
+
+    return old_history
 
 
 def plot_graphs(history, split, epoch):
-    plt.plot(history.history['accuracy'])
-    plt.plot(history.history['val_accuracy'])
+    plt.plot(history['accuracy'])
+    plt.plot(history['val_accuracy'])
     plt.title('model accuracy')
     plt.ylabel('accuracy')
     plt.xlabel('epoch')
@@ -225,8 +265,8 @@ def plot_graphs(history, split, epoch):
     plt.savefig(img_name)
 
     # summarize history for loss
-    plt.plot(history.history['loss'])
-    plt.plot(history.history['val_loss'])
+    plt.plot(history['loss'])
+    plt.plot(history['val_loss'])
     plt.title('model loss')
     plt.ylabel('loss')
     plt.xlabel('epoch')
@@ -294,10 +334,11 @@ def main():
     test_data_dir = os.path.join(split_dataset_dir, "test")
 
     model_dir = r"D:\Szum\SZuM3\lights-detection\models"
+    history_dir = r"D:\Szum\SZuM3\lights-detection\history"
 
-    split = "1"  # Change to your split
+    split = "2"  # Change to your split
     prepare_dataset(traffic_lights_dir, classified_traffic_lights_dir, split_dataset_dir)
-    train(train_data_dir, test_data_dir, model_dir, split)
+    train(train_data_dir, test_data_dir, model_dir, history_dir, split)
 
 
 if __name__ == "__main__":
