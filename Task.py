@@ -112,11 +112,11 @@ def get_split1_data():
         rescale=1. / 255
     )
 
-    test_datagen = ImageDataGenerator(
+    val_datagen = ImageDataGenerator(
         rescale=1. / 255
     )
 
-    return train_datagen, test_datagen
+    return train_datagen, val_datagen
 
 
 def get_split2_data():
@@ -132,7 +132,7 @@ def get_split2_data():
         brightness_range=[0.2, 1.0]
     )
 
-    test_datagen = ImageDataGenerator(
+    val_datagen = ImageDataGenerator(
         rescale=1. / 255,
         shear_range=0.2,
         zoom_range=0.2,
@@ -144,7 +144,7 @@ def get_split2_data():
         brightness_range=[0.2, 1.0]
     )
 
-    return train_datagen, test_datagen
+    return train_datagen, val_datagen
 
 
 def get_split3_data():
@@ -160,7 +160,7 @@ def get_split3_data():
         brightness_range=[0.2, 1.0]
     )
 
-    test_datagen = ImageDataGenerator(
+    val_datagen = ImageDataGenerator(
         rescale=1. / 255,
         shear_range=0.2,
         zoom_range=0.2,
@@ -172,7 +172,7 @@ def get_split3_data():
         brightness_range=[0.2, 1.0]
     )
 
-    return train_datagen, test_datagen
+    return train_datagen, val_datagen
 
 
 def get_split_data(split):
@@ -183,12 +183,12 @@ def get_split_data(split):
     result = split_translation.get(split, None)
     if result is None:
         raise Exception("Wrong split given!")
-    train_datagen, test_datagen = result()
+    train_datagen, val_datagen = result()
 
-    return train_datagen, test_datagen
+    return train_datagen, val_datagen
 
 
-def train(train_data_dir, test_data_dir, model_dir, history_dir, split):
+def train(train_data_dir, val_data_dir, model_dir, history_dir, split):
     img_width, img_height = 224, 224
     nb_train_samples = 16324
     nb_validation_samples = 1819
@@ -196,7 +196,7 @@ def train(train_data_dir, test_data_dir, model_dir, history_dir, split):
     batch_size = 16
 
     try:
-        train_datagen, test_datagen = get_split_data(split)
+        train_datagen, val_datagen = get_split_data(split)
     except Exception as e:
         print(e)
         return
@@ -209,14 +209,14 @@ def train(train_data_dir, test_data_dir, model_dir, history_dir, split):
                                                         batch_size=batch_size, class_mode='categorical',
                                                         shuffle=True)
 
-    test_generator = test_datagen.flow_from_directory(
-        test_data_dir,
+    val_generator = val_datagen.flow_from_directory(
+        val_data_dir,
         target_size=(img_width, img_height),
         batch_size=batch_size, class_mode='categorical', shuffle=True)
 
     history = model.fit(train_generator,
                         steps_per_epoch=nb_train_samples // batch_size,
-                        epochs=epochs, validation_data=test_generator,
+                        epochs=epochs, validation_data=val_generator,
                         validation_steps=nb_validation_samples // batch_size,
                         verbose=1)
 
@@ -260,7 +260,7 @@ def plot_graphs(history, split, epoch):
     plt.title('model accuracy')
     plt.ylabel('accuracy')
     plt.xlabel('epoch')
-    plt.legend(['train', 'test'], loc='upper right')
+    plt.legend(['train', 'val'], loc='upper right')
     img_name = f"model_accuracy_split{split}_epoch{epoch}.png"
     plt.savefig(img_name)
 
@@ -270,7 +270,7 @@ def plot_graphs(history, split, epoch):
     plt.title('model loss')
     plt.ylabel('loss')
     plt.xlabel('epoch')
-    plt.legend(['train', 'test'], loc='upper right')
+    plt.legend(['train', 'val'], loc='upper right')
     img_name = f"model_loss_split{split}_epoch{epoch}.png"
     plt.savefig(img_name)
 
@@ -331,14 +331,14 @@ def main():
     split_dataset_dir = r"D:\Szum\SZuM3\Output"
 
     train_data_dir = os.path.join(split_dataset_dir, "train")
-    test_data_dir = os.path.join(split_dataset_dir, "test")
+    val_data_dir = os.path.join(split_dataset_dir, "val")
 
     model_dir = r"D:\Szum\SZuM3\lights-detection\models"
     history_dir = r"D:\Szum\SZuM3\lights-detection\history"
 
     split = "2"  # Change to your split
     prepare_dataset(traffic_lights_dir, classified_traffic_lights_dir, split_dataset_dir)
-    train(train_data_dir, test_data_dir, model_dir, history_dir, split)
+    train(train_data_dir, val_data_dir, model_dir, history_dir, split)
 
 
 if __name__ == "__main__":
