@@ -260,9 +260,10 @@ def plot_graphs(history, split, epoch):
     plt.title('model accuracy')
     plt.ylabel('accuracy')
     plt.xlabel('epoch')
-    plt.legend(['train', 'val'], loc='upper right')
+    plt.legend(['train', 'val'], loc='lower right')
     img_name = f"model_accuracy_split{split}_epoch{epoch}.png"
     plt.savefig(img_name)
+    plt.close()
 
     # summarize history for loss
     plt.plot(history['loss'])
@@ -273,6 +274,7 @@ def plot_graphs(history, split, epoch):
     plt.legend(['train', 'val'], loc='upper right')
     img_name = f"model_loss_split{split}_epoch{epoch}.png"
     plt.savefig(img_name)
+    plt.close()
 
 
 def get_colour(path):
@@ -324,6 +326,14 @@ def is_dataset_prepared(split_dataset_dir):
         return False
 
 
+def plot_graph_from_history(history_dir, split, epochs):
+    history = get_history(history_dir, split)
+    if history is None:
+        return
+
+    plot_graphs(history, split, epochs)
+
+
 def main():
     # Adjust paths to your system
     traffic_lights_dir = r"Y:\DTLD\TraficLightsShuffled"
@@ -337,8 +347,10 @@ def main():
     history_dir = r"D:\Szum\SZuM3\lights-detection\history"
 
     split = "2"  # Change to your split
-    prepare_dataset(traffic_lights_dir, classified_traffic_lights_dir, split_dataset_dir)
-    train(train_data_dir, val_data_dir, model_dir, history_dir, split)
+
+    # prepare_dataset(traffic_lights_dir, classified_traffic_lights_dir, split_dataset_dir)
+    # train(train_data_dir, val_data_dir, model_dir, history_dir, split)
+    plot_graph_from_history(history_dir, split, 200)
 
 
 if __name__ == "__main__":
