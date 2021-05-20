@@ -41,8 +41,8 @@ def get_trained_model(model_dir, split):
 
     files.sort(key=cmp_to_key(compare))
 
-    model_epochs = get_epochs(files[0])
-    model_path = os.path.join(model_dir, files[0])
+    model_epochs = get_epochs(files[-1])
+    model_path = os.path.join(model_dir, files[-1])
 
     return keras.models.load_model(model_path), model_epochs
 
@@ -59,7 +59,7 @@ def get_history(history_dir, split):
 
     files.sort(key=cmp_to_key(compare))
 
-    history_path = os.path.join(history_dir, files[0])
+    history_path = os.path.join(history_dir, files[-1])
 
     with open(history_path, 'rb') as handle:
         history = load(handle)
@@ -336,21 +336,21 @@ def plot_graph_from_history(history_dir, split, epochs):
 
 def main():
     # Adjust paths to your system
-    traffic_lights_dir = r"Y:\DTLD\TraficLightsShuffled"
-    classified_traffic_lights_dir = r"Y:\DTLD\TraficLightsShuffled\Input"
-    split_dataset_dir = r"D:\Szum\SZuM3\Output"
+    traffic_lights_dir = r"C:\Studies\mgr\semester_1\SzUM\TraficLightsShuffled"
+    classified_traffic_lights_dir = r"C:\Studies\mgr\semester_1\SzUM\TraficLightsShuffled\Input"
+    split_dataset_dir = r"C:\Studies\mgr\semester_1\SzUM\TraficLightsShuffled\Output"
 
     train_data_dir = os.path.join(split_dataset_dir, "train")
     val_data_dir = os.path.join(split_dataset_dir, "val")
 
-    model_dir = r"D:\Szum\SZuM3\lights-detection\models"
-    history_dir = r"D:\Szum\SZuM3\lights-detection\history"
+    model_dir = r"C:\Studies\mgr\semester_1\SzUM\TraficLightsShuffled\models"
+    history_dir = r"C:\Studies\mgr\semester_1\SzUM\TraficLightsShuffled\history"
 
-    split = "2"  # Change to your split
+    split = "1"  # Change to your split
 
-    # prepare_dataset(traffic_lights_dir, classified_traffic_lights_dir, split_dataset_dir)
-    # train(train_data_dir, val_data_dir, model_dir, history_dir, split)
-    plot_graph_from_history(history_dir, split, 200)
+    prepare_dataset(traffic_lights_dir, classified_traffic_lights_dir, split_dataset_dir)
+    train(train_data_dir, val_data_dir, model_dir, history_dir, split)
+    # plot_graph_from_history(history_dir, split, 200)
 
 
 if __name__ == "__main__":
