@@ -4,7 +4,9 @@ import shutil
 from functools import cmp_to_key
 from pickle import dump, load
 
+from PIL import Image
 from keras_preprocessing.image import ImageDataGenerator
+from sklearn.metrics import classification_report, confusion_matrix
 from tensorflow import keras
 from tensorflow.keras.layers import Dense
 import matplotlib.pyplot as plt
@@ -13,6 +15,9 @@ from keras.models import Sequential
 from keras.layers import Conv2D, MaxPooling2D, BatchNormalization
 from keras.layers import Activation, Dropout, Flatten, Dense
 from keras import backend as K
+
+import numpy as np
+from skimage import transform
 
 
 def get_epochs(path):
@@ -334,23 +339,78 @@ def plot_graph_from_history(history_dir, split, epochs):
     plot_graphs(history, split, epochs)
 
 
+def get_test_data(test_dir):
+    path = f"{test_dir}/**/*.png"
+    images = []
+    classes = []
+    for file in glob.glob(path, recursive=True):
+        image = custom_load(file)
+        images.append(image)
+        file = os.path.splitext(os.path.basename(file))[0]
+        colour = get_colour(file)
+        classes.append(colour_to_one_hot(colour))
+    return np.array(images), np.array(classes)
+
+
+def colour_to_one_hot(colour):
+    # Index |   0   |   1   |   2   |   3   |   4
+    # Class |  GRN  |  NON  |  RED  |RED-YLW|  YLW
+
+    if colour == '0':
+        return 1  # git
+    elif colour == '1':
+        return 2  # git
+    elif colour == '2':
+        return 4  # git
+    elif colour == '3':
+        return 3  # git
+    else:
+        return 0  # git
+
+
+def custom_load(filename):
+    np_image = Image.open(filename)
+    np_image = np.array(np_image).astype('float32') / 255
+    np_image = transform.resize(np_image, (224, 224, 3))
+    return np_image
+
+
 def main():
     # Adjust paths to your system
-    traffic_lights_dir = r"C:\Studies\mgr\semester_1\SzUM\TraficLightsShuffled"
-    classified_traffic_lights_dir = r"C:\Studies\mgr\semester_1\SzUM\TraficLightsShuffled\Input"
-    split_dataset_dir = r"C:\Studies\mgr\semester_1\SzUM\TraficLightsShuffled\Output"
+    traffic_lights_dir = r"Y:\DTLD\TraficLightsShuffled"
+    classified_traffic_lights_dir = r"Y:\DTLD\TraficLightsShuffled\Input"
+    split_dataset_dir = r"D:\Szum\SZuM3\Output"
 
     train_data_dir = os.path.join(split_dataset_dir, "train")
     val_data_dir = os.path.join(split_dataset_dir, "val")
+    test_data_dir = os.path.join(split_dataset_dir, "test")
 
-    model_dir = r"C:\Studies\mgr\semester_1\SzUM\TraficLightsShuffled\models"
-    history_dir = r"C:\Studies\mgr\semester_1\SzUM\TraficLightsShuffled\history"
+    model_dir = r"D:\Szum\SZuM3\lights-detection\models"
+    history_dir = r"D:\Szum\SZuM3\lights-detection\history"
 
-    split = "1"  # Change to your split
+    split = "2"  # Change to your split
 
-    prepare_dataset(traffic_lights_dir, classified_traffic_lights_dir, split_dataset_dir)
-    train(train_data_dir, val_data_dir, model_dir, history_dir, split)
+    # prepare_dataset(traffic_lights_dir, classified_traffic_lights_dir, split_dataset_dir)
+    # train(train_data_dir, val_data_dir, model_dir, history_dir, split)
     # plot_graph_from_history(history_dir, split, 200)
+    img_width, img_height = 224, 224
+
+    model, _ = get_model(model_dir, split, img_width, img_height)
+
+    test_images, y_true = get_test_data(test_data_dir)
+    y_pred = model.predict(test_images)
+
+    rounded_y_true = y_true
+    rounded_y_pred = np.argmax(y_pred, axis=1)
+
+    # print(y_true)
+    # print(y_pred)
+    #
+    # print(rounded_y_true)
+    # print(rounded_y_pred)
+    target_names = ['GREEN', 'NONE', 'RED', 'RED-YELLOW', 'YELLOW']
+    print(confusion_matrix(rounded_y_true, rounded_y_pred))
+    print(classification_report(rounded_y_true, rounded_y_pred, target_names=target_names))
 
 
 if __name__ == "__main__":
